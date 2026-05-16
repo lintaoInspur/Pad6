@@ -21,7 +21,7 @@
 
         studio_unlock {
             bindings = <&studio_unlock>;
-            key-positions = <16 17>; 
+            key-positions = <0 4>; 
             timeout-ms = <150>;
         };
 
