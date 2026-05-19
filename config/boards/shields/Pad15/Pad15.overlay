@@ -124,26 +124,6 @@
         sensors = <&ec11_encoder>;
         triggers-per-rotation = <80>; 
     };
-
-    joystick: joystick {
-        compatible = "zmk,input-adc-pointer";
-        
-        // 绑定输入通道，指定 X 轴和 Y 轴使用的 ADC 通道号
-        x-ch = <0>; 
-        y-ch = <1>;
-        
-        // 摇杆物理参数微调
-        sampling-hz = <50>;      // 采样率 50Hz
-        scale-multiplier = <1>;  // 速度倍率
-        invert-x;                // 如果左右反了，删掉或加上这一行
-        invert-y;                // 如果上下反了，删掉或加上这一行
-    };
-
-    // 2. 将摇杆信号注入 ZMK 的鼠标虚拟核心
-    joystick_listener {
-        compatible = "zmk,input-listener";
-        device = <&joystick>;
-    };
 };
 
 /* --- 硬件外设引用区 (灯带、SPI、ADC、UART 等保持不变) --- */
