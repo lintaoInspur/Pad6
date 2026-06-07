@@ -20,7 +20,7 @@
     /* 强制重写或创建外部电源控制 */
     ext-power {
         compatible = "zmk,ext-power-generic";
-        /* 强制指定 gpio0 的 13 号引脚，低电平有效 */
+        /* 强制指定 gpio0 的 13 号引脚，高电平有效 */
         control-gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
         init-delay-ms = <50>;
     };
