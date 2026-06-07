@@ -17,6 +17,14 @@
         zmk,battery = &vbatt;
     };
 
+    /* 强制重写或创建外部电源控制 */
+    ext-power {
+        compatible = "zmk,ext-power-generic";
+        /* 强制指定 gpio0 的 13 号引脚，低电平有效 */
+        control-gpios = <&gpio0 13 GPIO_ACTIVE_LOW>;
+        init-delay-ms = <50>;
+    };
+
     /* 1. 扫描器定义 */
     kscan0: kscan {
         compatible = "zmk,kscan-gpio-matrix";
