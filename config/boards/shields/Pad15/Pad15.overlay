@@ -8,6 +8,7 @@
 #include <dt-bindings/pinctrl/nrf-pinctrl.h>
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 #include <zephyr/dt-bindings/adc/adc.h>
+#include <dt-bindings/zmk/input_transform.h>
 
 / {
     chosen {
@@ -191,46 +192,70 @@
 };
 
 &adc {
-	status = "okay";
+    status = "okay";
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    // 为 nRF52840 声明你的两个物理 ADC 通道
+    // 假设你的摇杆 X 轴接在 AIN0 (P0.02)，Y 轴接在 AIN5 (P0.29)
+    channel@0 {
+        reg = <0>;
+        zephyr,gain = "ADC_GAIN_1_6";            // 1/6 增益，配合内部基准可测量 0-3.6V 电压
+        zephyr,reference = "ADC_REF_INTERNAL";    // 使用内部 0.6V 绝对基准
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,input-positive = <NRF_SAADC_AIN0>; 
+    };
+
+    channel@5 {
+        reg = <5>;
+        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,input-positive = <NRF_SAADC_AIN5>;
+    };
 };
 
 / {
-    anin0: analog_input_0 {
-        compatible = "zmk,analog-input";
-        sampling-hz = <100>;
-        
-        y-ch {
-            io-channels = <&adc 0>; 
-            /* 1. 中位电压：nRF52840 在 3.3V 供电下，理论中点在 1650 左右 */
-            mv-mid = <1500>;      
-            mv-min-max = <1400>;  /* 稍微改小，防止边缘推不到头 */
-            
-            /* 中点找准后，死区可以适当降低以提升微操手感，80略大，可先保持80测试，正常后改回40-50 */
-            mv-deadzone = <50>;   
-            /* 3. 调整缩放：分母（divisor）越大，鼠标移动越慢、越精准 */
-            scale-multiplier = <1>;
-            scale-divisor = <70>; 
-            
-            evt-type = <INPUT_EV_REL>;
-            input-code = <INPUT_REL_Y>;
-            
-            report-on-change-only; 
+    // 1. 实例化 Zephyr 原生类比轴驱动（将 ADC 转化为标准的绝对轴事件）
+    joystick: joystick {
+        compatible = "analog-axis";
+        poll-period-ms = <12>; // 采样周期 12ms (约 83Hz Polling Rate)，兼顾顺滑度与低功耗
+
+        axis_x {
+            io-channels = <&adc 0>;
+            zephyr,axis = <INPUT_ABS_X>; // 显式映射为绝对 X 轴
+            in-min = <100>;              // 摇杆推到最左侧时的底层 ADC 采样最小值
+            in-max = <4000>;             // 摇杆推到最右侧时的底层 ADC 采样最大值
+            in-deadzone = <150>;         // 硬件中位死区，完全解决摇杆静止时鼠标乱晃飘移的痛点
+            out-min = <(-127)>;          // 线性映射后的事件输出极值
+            out-max = <127>;
         };
-        
-        x-ch {
-            io-channels = <&adc 5>; 
-            
-            mv-mid = <1500>;      
-            mv-min-max = <1400>; 
-            mv-deadzone = <50>;   
-            
-            scale-multiplier = <3>;
-            scale-divisor = <70>; 
-            
-            evt-type = <INPUT_EV_REL>;
-            input-code = <INPUT_REL_X>;
-            
-            report-on-change-only;
+
+        axis_y {
+            io-channels = <&adc 5>;
+            zephyr,axis = <INPUT_ABS_Y>; // 显式映射为绝对 Y 轴
+            in-min = <100>;              // 摇杆推到最下侧时的底层 ADC 采样最小值
+            in-max = <4000>;             // 摇杆推到最上侧时的底层 ADC 采样最大值
+            in-deadzone = <150>;
+            out-min = <(-127)>;
+            out-max = <127>;
         };
+    };
+
+    // 2. 建立 ZMK 输入监听器（将上述绝对轴事件，转换为 HID 鼠标相对像素位移）
+    joystick_listener: joystick_listener {
+        compatible = "zmk,input-listener";
+        device = <&joystick>; // 订阅上面定义的类比摇杆设备
+
+        // 【大招区】：通过内置处理器，直接在这里用纯软件纠正你的硬件轴向错误！
+        input-processors = 
+            // 选项 A：如果左右拨动鼠标上下走，直接在这里加上物理轴对调标记
+            <&zip_xy_transform INPUT_TRANSFORM_XY_SWAP>, 
+            
+            // 选项 B：如果方向反了，可以通过位或运算叠加取反标记（如：INPUT_TRANSFORM_X_INVERT）
+            // <&zip_xy_transform (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_Y_INVERT)>,
+            
+            // 基础灵敏度缩放：将最终输出的鼠标位移乘以 1 / 分母 2 (可根据手感自由调节)
+            <&zip_xy_scaler 1 2>;
     };
 };
