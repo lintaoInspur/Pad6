@@ -4,10 +4,9 @@
 #include <dt-bindings/zmk/bt.h>    // 蓝牙控制字典
 #include <dt-bindings/zmk/ext_power.h> // 电源控制
 #include <dt-bindings/zmk/mouse.h> // 鼠标控制字典
-#include <dt-bindings/zmk/rgb.h>        // RGB 灯效控制
 #include <dt-bindings/zmk/outputs.h>    // 输出切换 (USB/BLE)
 #include <dt-bindings/zmk/pointing.h>   /* 鼠标模拟*/
-#include <dt-bindings/zmk/backlight.h>  //背光控制
+
 
 
 /* 第二部分：定义你的层级名称（方便阅读，不是必须的，但极度推荐） */
@@ -92,7 +91,7 @@
 
         function {
             bindings = <
-                &rgb_ug RGB_TOG  &kp F15  &kp K_SCREENSAVER  &kp C_MUTE
+                &none  &kp F15  &kp K_SCREENSAVER  &kp C_MUTE
                 &kp F7      &kp F8      &kp F9      &mkp LCLK
                 &kp F4      &kp F5      &kp F6      &msc SCRL_UP
                 &kp F1      &kp F2      &kp F3      &msc SCRL_UP
